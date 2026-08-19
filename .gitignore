@@ -1,0 +1,7 @@
+.env
+data/
+config/projects.json
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store

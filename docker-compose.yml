@@ -1,10 +1,38 @@
 services:
-
   api-vps:
-    build: .
+    build:
+      context: .
     container_name: api-vps
-    restart: always
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATA_DIR: /data
+      DASHBOARD_DIR: /app/dashboard
+      PROJECTS_FILE: /app/config/projects.json
+      HOST_HOSTNAME_FILE: /host/etc/hostname
+      HOST_OS_RELEASE_FILE: /host/etc/os-release
+      SELF_CONTAINER_NAME: api-vps
+      MANAGED_ROOTS: ${MANAGED_ROOTS:-opt=/opt;www=/var/www}
     ports:
-      - "9000:9000"
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-9000}:9000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /opt:/opt
+      - /var/www:/var/www
+      - /etc/hostname:/host/etc/hostname:ro
+      - /etc/os-release:/host/etc/os-release:ro
+      - ./data:/data
+      - ./config:/app/config:ro
+    pid: host
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    stop_grace_period: 25s
+    labels:
+      io.dioi.service: api-vps
+      io.dioi.protected: "true"

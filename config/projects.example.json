@@ -1,0 +1,45 @@
+[
+  {
+    "id": "api-vps",
+    "name": "API‑VPS Control Center",
+    "root": "opt",
+    "path": "api-vps",
+    "repository": "https://github.com/nguyentruonggiangvbs/API-VPS-.git",
+    "branch": "main",
+    "mode": "compose",
+    "compose_file": "docker-compose.yml",
+    "health_url": "http://127.0.0.1:9000/api/health",
+    "enabled": true,
+    "protected": true,
+    "allow_dirty": false,
+    "timeout_seconds": 900
+  },
+  {
+    "id": "camera-pc",
+    "name": "Camera PC",
+    "root": "opt",
+    "path": "camera-pc",
+    "branch": "main",
+    "mode": "compose",
+    "compose_file": "docker-compose.yml",
+    "health_url": null,
+    "enabled": true,
+    "protected": false,
+    "allow_dirty": false,
+    "timeout_seconds": 1200
+  },
+  {
+    "id": "dioi-app",
+    "name": "Đi Ơi App",
+    "root": "opt",
+    "path": "dioi-app",
+    "branch": "main",
+    "mode": "compose",
+    "compose_file": "docker-compose.yml",
+    "health_url": null,
+    "enabled": false,
+    "protected": false,
+    "allow_dirty": false,
+    "timeout_seconds": 1200
+  }
+]
