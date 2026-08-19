@@ -46,6 +46,7 @@ jobs:
         run: |
           bash -n scripts/deploy-vps.sh
           bash -n scripts/update.sh
+          bash -n scripts/activate-auto-deploy.sh
           sh -n scripts/install.sh
           sh -n scripts/install-nginx.sh
           sh -n scripts/git-askpass.sh
