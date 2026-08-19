@@ -1,16 +1,148 @@
-name: Deploy API VPS
+name: Deploy API-VPS to production
 
 on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-vps-production
+  cancel-in-progress: false
+
+env:
+  VPS_HOST: ${{ secrets.VPS_HOST }}
+  VPS_PORT: ${{ secrets.VPS_PORT }}
+  VPS_USER: ${{ secrets.VPS_USER }}
+  VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+  VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+  VPS_PROJECT_PATH: ${{ secrets.VPS_PROJECT_PATH }}
+  VPS_HEALTH_URL: ${{ secrets.VPS_HEALTH_URL }}
+  VPS_PUBLIC_URL: ${{ secrets.VPS_PUBLIC_URL }}
 
 jobs:
-  notify-vps:
+  deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Trigger VPS deploy agent
+      - name: Checkout approved source
+        uses: actions/checkout@v4
+
+      - name: Resolve and validate deployment configuration
+        shell: bash
         run: |
-          curl -X POST "$VPS_DEPLOY_URL/deploy" \
-          -H "x-deploy-secret: $VPS_DEPLOY_SECRET"
+          set -euo pipefail
+
+          port="${VPS_PORT:-22}"
+          project_path="${VPS_PROJECT_PATH:-/opt/api-vps}"
+          health_url="${VPS_HEALTH_URL:-http://127.0.0.1:9000/api/health}"
+
+          missing=()
+          for name in VPS_HOST VPS_USER VPS_SSH_KEY VPS_KNOWN_HOSTS; do
+            [[ -n "${!name:-}" ]] || missing+=("$name")
+          done
+
+          if (( ${#missing[@]} > 0 )); then
+            echo "DEPLOY_READY=false" >> "$GITHUB_ENV"
+            printf 'Auto deploy is not activated. Missing repository secrets: %s\n' \
+              "${missing[*]}" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          python3 - \
+            "$VPS_HOST" \
+            "$VPS_USER" \
+            "$port" \
+            "$project_path" \
+            "$health_url" <<'PY'
+          import re
+          import sys
+          from urllib.parse import urlsplit
+
+          host, user, port_raw, project_path, health_url = sys.argv[1:]
+
+          if not re.fullmatch(r"[A-Za-z0-9._-]+", host):
+              raise SystemExit("VPS_HOST must be a hostname or IPv4 address")
+          if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", user):
+              raise SystemExit("VPS_USER is invalid")
+
+          port = int(port_raw)
+          if not 1 <= port <= 65535:
+              raise SystemExit("VPS_PORT must be between 1 and 65535")
+
+          if not re.fullmatch(r"/[A-Za-z0-9._/-]+", project_path):
+              raise SystemExit("VPS_PROJECT_PATH is invalid")
+
+          parsed = urlsplit(health_url)
+          if (
+              parsed.scheme not in {"http", "https"}
+              or not parsed.netloc
+              or parsed.username
+              or parsed.password
+              or parsed.fragment
+              or any(char.isspace() or char in "'\"" for char in health_url)
+          ):
+              raise SystemExit("VPS_HEALTH_URL is invalid")
+          PY
+
+          echo "VPS_PORT=$port" >> "$GITHUB_ENV"
+          echo "VPS_PROJECT_PATH=$project_path" >> "$GITHUB_ENV"
+          echo "VPS_HEALTH_URL=$health_url" >> "$GITHUB_ENV"
+          echo "DEPLOY_READY=true" >> "$GITHUB_ENV"
+
+      - name: Configure SSH
+        if: env.DEPLOY_READY == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/api_vps_deploy"
+          chmod 600 "$HOME/.ssh/api_vps_deploy"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Deploy and verify on VPS
+        if: env.DEPLOY_READY == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh_opts=(
+            -i "$HOME/.ssh/api_vps_deploy"
+            -p "$VPS_PORT"
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o ConnectTimeout=15
+          )
+
+          ssh "${ssh_opts[@]}" "$VPS_USER@$VPS_HOST" \
+            "bash -s -- '$VPS_PROJECT_PATH' 'main' '$VPS_HEALTH_URL'" \
+            < scripts/deploy-vps.sh
+
+      - name: Verify public endpoint
+        if: env.DEPLOY_READY == 'true' && env.VPS_PUBLIC_URL != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            --location \
+            --max-time 20 \
+            -H 'Cache-Control: no-cache' \
+            "${VPS_PUBLIC_URL%/}/api/health"
+
+      - name: Deployment summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## API-VPS deployment"
+            echo
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Ready: \`${DEPLOY_READY:-false}\`"
+            echo "- Workflow: \`$GITHUB_WORKFLOW\`"
+          } >> "$GITHUB_STEP_SUMMARY"
