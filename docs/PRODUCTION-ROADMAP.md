@@ -1,36 +1,39 @@
-# API-VPS Production Roadmap
+# Production Status
 
-## Completed
-- FastAPI controller
-- Dashboard web
-- System monitoring
-- Docker status
-- GitHub project memory
-- Deployment documentation
-- Deploy agent architecture
-- Nginx reverse proxy template
+## v1.0.0 — hoàn thành
 
-## Next modules
+- [x] FastAPI modular backend
+- [x] Dashboard responsive
+- [x] Monitoring realtime/history/processes
+- [x] File Manager allowlist
+- [x] Docker Manager
+- [x] Deploy Manager + rollback
+- [x] Backup + restore
+- [x] Audit log
+- [x] API key, rate limit, CSP, security headers
+- [x] Docker read-only filesystem + no-new-privileges
+- [x] Nginx template
+- [x] CI compile/JavaScript/shell/security/Compose/container smoke test
+- [x] SSH auto deploy + lock + backup + health check + rollback
+- [x] Project memory và deployment documentation
 
-### Security
-- HTTPS Let's Encrypt
-- Firewall rules
-- API key rotation
-- Audit logs
+## Kích hoạt vận hành
 
-### Management
-- File Manager
-- Web Terminal
-- Backup Manager
-- Database Manager
-- Docker Compose Manager
+Còn đúng một thao tác hạ tầng ngoài repository:
 
-### Automation
-- GitHub webhook deploy
-- Health checks
-- Auto rollback
-- Deployment history
+1. cấu hình GitHub Actions secrets;
+2. chạy `scripts/install.sh` lần đầu hoặc deploy thủ công;
+3. cấu hình Nginx + HTTPS;
+4. bỏ truy cập công khai trực tiếp tới port `9000`.
 
-## Target architecture
+## Sau v1.0.0 — tùy chọn
 
-GitHub -> Actions -> VPS Agent -> Docker -> Services
+- Multi-user/RBAC.
+- 2FA hoặc SSO.
+- Persistent metrics database.
+- Remote backup storage.
+- Alerting Telegram/email.
+- Docker image update policy.
+- Multi-VPS inventory.
+
+Các mục tùy chọn không ngăn v1.0.0 vận hành.
