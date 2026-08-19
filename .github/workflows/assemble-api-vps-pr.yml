@@ -56,6 +56,12 @@ jobs:
           set -euo pipefail
           find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf -- {} +
           tar -xzf /tmp/api-vps-complete.tar.gz -C .
+
+          # GitHub App tokens without the workflows permission cannot push a new
+          # workflow file. The CI workflow is added separately by the connector
+          # after this verified source commit reaches the PR branch.
+          rm -f .github/workflows/ci.yml
+
           chmod 0755 scripts/*.sh
           python3 -m compileall -q app.py vps_control
           node --check dashboard/app.js
@@ -63,6 +69,10 @@ jobs:
           sh -n scripts/update.sh
           sh -n scripts/install-nginx.sh
           sh -n scripts/git-askpass.sh
+
+      - name: Build container
+        if: steps.payload.outputs.ready == 'true'
+        run: docker build -t api-vps-control-center:ci .
 
       - name: Commit complete control panel
         if: steps.payload.outputs.ready == 'true'
