@@ -1,0 +1,49 @@
+name: Validate API-VPS
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Compile Python
+        env:
+          API_KEY: 0123456789abcdef0123456789abcdef
+          ALLOW_INSECURE_API_KEY: "1"
+          DASHBOARD_DIR: ${{ github.workspace }}/dashboard
+          DATA_DIR: /tmp/api-vps-data
+          MANAGED_ROOTS: repo=${{ github.workspace }}
+          PROJECTS_FILE: ${{ github.workspace }}/config/projects.example.json
+        run: python -m compileall -q app.py vps_control
+
+      - name: Validate JavaScript
+        run: node --check dashboard/app.js
+
+      - name: Validate shell scripts
+        run: |
+          sh -n scripts/install.sh
+          sh -n scripts/update.sh
+          sh -n scripts/install-nginx.sh
+          sh -n scripts/git-askpass.sh
+
+      - name: Build container
+        run: docker build -t api-vps:test .
