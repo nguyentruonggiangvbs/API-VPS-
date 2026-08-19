@@ -58,17 +58,17 @@ if "no-new-privileges:true" not in compose:
 
 dashboard = (ROOT / "dashboard/index.html").read_text(encoding="utf-8")
 for required in (
-    'data-view="overview"',
-    'data-view="monitoring"',
-    'data-view="files"',
-    'data-view="docker"',
-    'data-view="deploy"',
-    'data-view="backups"',
-    'data-view="logs"',
-    'data-view="settings"',
+    'data-page="overview"',
+    'data-page="monitoring"',
+    'data-page="files"',
+    'data-page="docker"',
+    'data-page="deploy"',
+    'data-page="backups"',
+    'data-page="logs"',
+    'data-page="settings"',
 ):
     if required not in dashboard:
-        errors.append(f"dashboard is missing required view marker: {required}")
+        errors.append(f"dashboard is missing required page marker: {required}")
 
 deploy_workflow = (
     ROOT / ".github/workflows/deploy-vps.yml"
