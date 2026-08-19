@@ -14,6 +14,7 @@
 - Nginx/HTTPS templates and installation scripts.
 - CI checks for Python, JavaScript, shell, repository security, Docker Compose and container smoke tests.
 - SSH-based auto deployment with strict host verification, deployment lock, local-diff backup, health verification and rollback.
+- One-time activation script that creates a dedicated deploy user/key, writes GitHub Actions Secrets and triggers the initial deployment.
 
 ### Removed
 
