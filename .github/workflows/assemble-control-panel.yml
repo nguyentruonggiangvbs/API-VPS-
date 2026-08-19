@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - feature/vps-control-panel
-    paths:
-      - '.github/workflows/assemble-control-panel.yml'
   workflow_dispatch:
 
 permissions:
