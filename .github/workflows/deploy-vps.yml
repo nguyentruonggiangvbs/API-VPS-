@@ -1,0 +1,16 @@
+name: Deploy API VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  notify-vps:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger VPS deploy agent
+        run: |
+          curl -X POST "$VPS_DEPLOY_URL/deploy" \
+          -H "x-deploy-secret: $VPS_DEPLOY_SECRET"
