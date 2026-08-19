@@ -1,7 +1,10 @@
+# API VPS reverse proxy
+# Copy to /etc/nginx/sites-available/api-vps.conf
+
 server {
     listen 80;
     listen [::]:80;
-    server_name __SERVER_NAME__;
+    server_name your-domain.com;
 
     client_max_body_size 100m;
 
