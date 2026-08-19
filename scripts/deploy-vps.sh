@@ -79,12 +79,12 @@ git clean -fd \
   -e config/projects.json
 
 chmod 0755 scripts/*.sh
-docker compose config -q
 
 if [[ ! -f .env ]]; then
   log "No .env found; running one-time installer"
   ./scripts/install.sh
 else
+  docker compose config -q
   docker compose build --pull
   docker compose up -d --remove-orphans
 fi
