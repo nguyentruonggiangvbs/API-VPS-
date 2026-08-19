@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>API VPS Control Center</title>
+<style>
+body{font-family:Arial;background:#0f172a;color:#fff;padding:30px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}.card{background:#1e293b;padding:25px;border-radius:18px}.value{font-size:32px;color:#38bdf8}button{padding:10px 15px;border:0;border-radius:8px;background:#2563eb;color:#fff}
+</style>
+</head>
+<body>
+<h1>API VPS Control Center</h1>
+<div class="grid">
+<div class="card"><h3>CPU</h3><div class="value" id="cpu">--</div></div>
+<div class="card"><h3>RAM</h3><div class="value" id="ram">--</div></div>
+<div class="card"><h3>Docker</h3><pre id="docker">--</pre></div>
+</div>
+<br>
+<button onclick="load()">Refresh</button>
+<script>
+async function load(){
+ const r=await fetch('/system/info');
+ const d=await r.json();
+ document.getElementById('cpu').innerText=d.cpu;
+ document.getElementById('ram').innerText=d.memory;
+ const x=await fetch('/docker/list');
+ document.getElementById('docker').innerText=(await x.json()).containers;
+}
+load();
+</script>
+</body>
+</html>
