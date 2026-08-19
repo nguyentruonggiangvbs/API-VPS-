@@ -33,16 +33,54 @@ docker compose ps
 
 `install.sh` tạo API key an toàn và chỉ in một lần. Lưu khóa trong trình quản lý mật khẩu.
 
+## Kích hoạt GitHub → VPS tự động một lần
+
+Điều kiện:
+
+- chạy bằng `root` trên VPS;
+- GitHub CLI đã đăng nhập đúng tài khoản có quyền quản trị repository;
+- Docker, Docker Compose, Git và OpenSSH đã hoạt động.
+
+Kiểm tra GitHub CLI:
+
+```bash
+gh auth status -h github.com
+```
+
+Sau đó chạy:
+
+```bash
+cd /opt/api-vps
+git fetch origin main
+git reset --hard origin/main
+chmod 0755 scripts/*.sh
+sudo ./scripts/activate-auto-deploy.sh
+```
+
+Script tự động:
+
+1. tạo user giới hạn quyền `api-vps-deploy`;
+2. thêm user vào group Docker;
+3. tạo SSH key Ed25519 riêng cho GitHub Actions;
+4. cài public key vào `authorized_keys`;
+5. tạo `known_hosts` từ SSH host key thật của chính VPS;
+6. ghi toàn bộ GitHub Actions Secrets qua `gh secret set`;
+7. kích hoạt workflow deploy production lần đầu.
+
+Không gửi hoặc commit private key, API key hay GitHub token.
+
+Theo mặc định production bind vào `127.0.0.1:9000`. Sau khi cập nhật, truy cập trực tiếp bằng `http://IP:9000` sẽ không còn hoạt động; đây là hành vi bảo mật đúng.
+
 ## Nginx và HTTPS
 
-API mặc định chỉ bind localhost. Trỏ tên miền về VPS rồi chạy:
+Trỏ tên miền về VPS rồi chạy:
 
 ```bash
 sudo ./scripts/install-nginx.sh api-vps.example.com
 sudo certbot --nginx -d api-vps.example.com
 ```
 
-Không nhập API key qua HTTP công khai.
+Sau đó mở dashboard bằng HTTPS qua tên miền. Không nhập API key qua HTTP công khai.
 
 ## Deploy thủ công có rollback
 
@@ -60,7 +98,7 @@ Script:
 2. backup trạng thái Git và local diff;
 3. fetch `origin/main`;
 4. reset source về commit đã duyệt;
-5. giữ nguyên `.env`, `data/`, `config/projects.json`;
+5. giữ nguyên `.env`, `data`, `config/projects.json`;
 6. build và khởi động Docker Compose;
 7. health check;
 8. rollback commit trước nếu lỗi;
@@ -74,7 +112,7 @@ Workflow:
 .github/workflows/deploy-vps.yml
 ```
 
-Workflow dùng SSH key dành riêng và gọi `scripts/deploy-vps.sh` từ source đã checkout. Xem danh sách secret trong `docs/AUTO-DEPLOY-ARCHITECTURE.md`.
+Workflow dùng SSH key dành riêng, strict host-key checking và gọi `scripts/deploy-vps.sh` từ source đã checkout. Xem chi tiết trong `docs/AUTO-DEPLOY-ARCHITECTURE.md`.
 
 ## Khôi phục khi workflow không chạy được
 
