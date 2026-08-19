@@ -3,7 +3,8 @@ name: Validate API-VPS
 on:
   pull_request:
   push:
-    branches: [main]
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -33,17 +34,65 @@ jobs:
           DATA_DIR: /tmp/api-vps-data
           MANAGED_ROOTS: repo=${{ github.workspace }}
           PROJECTS_FILE: ${{ github.workspace }}/config/projects.example.json
-        run: python -m compileall -q app.py vps_control
+        run: python -m compileall -q app.py vps_control scripts
+
+      - name: Run security and consistency checks
+        run: python scripts/security-check.py
 
       - name: Validate JavaScript
         run: node --check dashboard/app.js
 
       - name: Validate shell scripts
         run: |
+          bash -n scripts/deploy-vps.sh
+          bash -n scripts/update.sh
           sh -n scripts/install.sh
-          sh -n scripts/update.sh
           sh -n scripts/install-nginx.sh
           sh -n scripts/git-askpass.sh
 
+      - name: Validate Docker Compose
+        shell: bash
+        run: |
+          cp .env.example .env
+          cp config/projects.example.json config/projects.json
+          docker compose config -q
+          rm -f .env config/projects.json
+
       - name: Build container
         run: docker build -t api-vps:test .
+
+      - name: Smoke test container
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/api-vps-smoke-data /tmp/api-vps-smoke-root
+          docker run -d \
+            --name api-vps-smoke \
+            -p 127.0.0.1:19000:9000 \
+            -e API_KEY=0123456789abcdef0123456789abcdef \
+            -e ALLOW_INSECURE_API_KEY=1 \
+            -e DATA_DIR=/data \
+            -e DASHBOARD_DIR=/app/dashboard \
+            -e PROJECTS_FILE=/app/config/projects.example.json \
+            -e MANAGED_ROOTS=smoke=/tmp/smoke \
+            -v /tmp/api-vps-smoke-data:/data \
+            -v /tmp/api-vps-smoke-root:/tmp/smoke \
+            api-vps:test
+
+          cleanup() {
+            docker logs api-vps-smoke || true
+            docker rm -f api-vps-smoke >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          for attempt in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:19000/api/health >/dev/null; then
+              curl -fsS \
+                -H 'Authorization: Bearer 0123456789abcdef0123456789abcdef' \
+                http://127.0.0.1:19000/api/auth/verify
+              exit 0
+            fi
+            sleep 2
+          done
+
+          exit 1
