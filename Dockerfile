@@ -41,4 +41,4 @@ HEALTHCHECK --interval=20s --timeout=5s --start-period=20s --retries=4 \
   CMD wget -q -O /dev/null http://127.0.0.1:9000/api/health || exit 1
 
 ENTRYPOINT ["/sbin/tini","--"]
-CMD ["uvicorn","app:app","--host","0.0.0.0","--port","9000","--proxy-headers","--forwarded-allow-ips=127.0.0.1"]
+CMD ["uvicorn","vps_control.design_host:app","--host","0.0.0.0","--port","9000","--proxy-headers","--forwarded-allow-ips=127.0.0.1"]
